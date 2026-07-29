@@ -39,6 +39,7 @@ export class OrchestratorService {
   async dispatch(params: {
     repo: string;
     goal: string;
+    context?: string;
     acceptanceCmd: string;
     mayEdit: string[];
     maxSteps?: number;
@@ -53,6 +54,7 @@ export class OrchestratorService {
       {
         taskId,
         goal: params.goal,
+        context: params.context,
         acceptanceCmd: params.acceptanceCmd,
         workdir: '', // placeholder — not yet created
         mayEdit: params.mayEdit,
@@ -83,6 +85,7 @@ export class OrchestratorService {
     const contract = createTaskContract({
       taskId,
       goal: params.goal,
+      context: params.context,
       acceptanceCmd: params.acceptanceCmd,
       workdir: worktree,
       mayEdit: params.mayEdit,

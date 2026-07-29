@@ -30,6 +30,9 @@ Returns immediately with a taskId — poll ds_status and ds_tail to monitor.`,
       mayEdit: z.array(z.string()).nonempty().describe(
         'Glob patterns the worker is allowed to modify. Be as narrow as possible (e.g., ["src/feature-a/**"]). Expand if the worker needs broader access.',
       ),
+      context: z.string().optional().describe(
+        'Conversation context for the worker — why this approach, what NOT to touch, scope boundaries, user preferences. Inject relevant discussion points, rejected alternatives, and explicit guardrails. The worker sees this in its system prompt.',
+      ),
       maxSteps: z.number().int().min(1).max(200).optional().describe('Maximum agent steps (default 40). Increase for complex multi-file work.'),
       maxSeconds: z.number().int().min(10).max(7200).optional().describe('Time budget in seconds (default 900 = 15min). Increase for long builds.'),
     },

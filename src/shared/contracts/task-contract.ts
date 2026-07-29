@@ -39,6 +39,14 @@ export interface TaskContract {
    */
   readonly goal: string;
 
+  /**
+   * Optional conversation context. Injected into the worker's system prompt.
+   * Use for: scope boundaries, rationale for approach, what NOT to touch,
+   * user preferences, rejected alternatives, explicit guardrails.
+   * Helps prevent out-of-scope hallucinations and incorrect assumptions.
+   */
+  readonly context?: string;
+
   /** Shell command. Exit 0 = task is done. Runs independently in the worktree. */
   readonly acceptanceCmd: string;
 
@@ -76,6 +84,7 @@ export interface TaskContract {
 export function createTaskContract(overrides: {
   taskId: string;
   goal: string;
+  context?: string;
   acceptanceCmd: string;
   workdir: string;
   mayEdit: string[];
@@ -88,6 +97,7 @@ export function createTaskContract(overrides: {
   return {
     taskId: overrides.taskId,
     goal: overrides.goal,
+    context: overrides.context,
     acceptanceCmd: overrides.acceptanceCmd,
     workdir: overrides.workdir,
     mayEdit: overrides.mayEdit,

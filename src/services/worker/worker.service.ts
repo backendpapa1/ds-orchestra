@@ -58,14 +58,22 @@ export class WorkerService {
     this.emit(contract.taskId, { t: 0, kind: 'start', contract });
 
     // Build initial message history
+    const systemContent = contract.context
+      ? SYSTEM_PROMPT + `\n\n## ADDITIONAL CONTEXT FROM THE ORCHESTRATOR\n\nThe following was provided by the developer who dispatched this task. It contains scope boundaries, rationale, and guardrails that you MUST follow:\n\n${contract.context}`
+      : SYSTEM_PROMPT;
+
+    const taskPrompt = contract.context
+      ? `Your task:\n\n${contract.goal}\n\nAcceptance command: ${contract.acceptanceCmd}\n\nYou may edit files matching: ${contract.mayEdit.join(', ')}\n\nNote: review the ADDITIONAL CONTEXT in the system prompt for scope boundaries and guardrails. Begin by reading relevant files and understanding the codebase. When done, call submit with a summary of your changes.`
+      : `Your task:\n\n${contract.goal}\n\nAcceptance command: ${contract.acceptanceCmd}\n\nYou may edit files matching: ${contract.mayEdit.join(', ')}\n\nBegin by reading relevant files and understanding the codebase. When done, call submit with a summary of your changes.`;
+
     const messages: ChatCompletionMessageParam[] = [
       {
         role: 'system',
-        content: SYSTEM_PROMPT,
+        content: systemContent,
       },
       {
         role: 'user',
-        content: `Your task:\n\n${contract.goal}\n\nAcceptance command: ${contract.acceptanceCmd}\n\nYou may edit files matching: ${contract.mayEdit.join(', ')}\n\nBegin by reading relevant files and understanding the codebase. When done, call submit with a summary of your changes.`,
+        content: taskPrompt,
       },
     ];
 

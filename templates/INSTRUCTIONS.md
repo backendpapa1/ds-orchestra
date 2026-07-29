@@ -34,6 +34,7 @@ Call `ds_dispatch` with these parameters:
 |---|---|---|
 | `repo` | Yes | Absolute path to the git repository |
 | `goal` | Yes | Closed-form spec. Exact signatures, edge cases, expected behavior. |
+| `context` | No | Conversation context for the worker. Inject scope boundaries, rationale, what NOT to touch, user preferences, rejected alternatives, and explicit guardrails. Helps prevent out-of-scope changes. |
 | `acceptanceCmd` | Yes | Shell command that exits 0 on success. Must work in the isolated worktree. |
 | `mayEdit` | Yes | Glob patterns the worker can write to. Be narrow. Adjust based on scope. |
 | `maxSteps` | No | Max agent steps (default 40). Increase for complex multi-file work. |
