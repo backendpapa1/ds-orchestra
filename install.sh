@@ -76,7 +76,7 @@ else
   INSTALL_DIR="${DS_INSTALL_DIR:-$HOME/.ds-orchestra/bin}"
   mkdir -p "$INSTALL_DIR"
   # Tarball URL would be set during publish
-  TARBALL_URL="https://github.com/ds-orchestra/releases/download/v${DS_VERSION}/ds-orchestra-${OS}-${ARCH}.tar.gz"
+  TARBALL_URL="https://github.com/backendpapa1/ds-orchestra/releases/download/v${DS_VERSION}/ds-orchestra-${OS}-${ARCH}.tar.gz"
   log "Downloading from $TARBALL_URL..."
   curl -fsSL "$TARBALL_URL" | tar -xz -C "$INSTALL_DIR"
   INSTALL_METHOD="tarball"
@@ -134,14 +134,11 @@ if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
     warn "DEEPSEEK_API_KEY is not set."
     warn "Get your key from https://platform.deepseek.com"
     warn ""
-    warn "Add this to your shell rc file (~/.bashrc, ~/.zshrc):"
-    warn "  export DEEPSEEK_API_KEY=sk-your-key-here"
-    warn ""
-    warn "Or set it inline before running ds-orchestra-mcp:"
-    warn "  DEEPSEEK_API_KEY=sk-... ds-orchestra-mcp"
+    warn "Save it with:"
+    warn "  ds-orchestra config set api_key sk-your-key-here"
   else
     warn "DEEPSEEK_API_KEY is not set. The MCP server will fail to start."
-    warn "Set it in your environment: export DEEPSEEK_API_KEY=sk-..."
+    warn "Save it with: ds-orchestra config set api_key sk-your-key-here"
   fi
 fi
 

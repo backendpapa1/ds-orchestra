@@ -8,7 +8,7 @@ Claude retains design authority. DeepSeek implements against a closed-form contr
 
 ### curl (recommended)
 ```bash
-curl -fsSL https://github.com/ds-orchestra/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/backendpapa1/ds-orchestra/releases/latest/download/install.sh | bash
 ```
 
 ### npm
