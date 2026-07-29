@@ -4,6 +4,7 @@ dist/
 *.log
 .remember/
 .kanban/
+.claude/
 CLAUDE.md
 dev-plan/
 prd.md
