@@ -97,6 +97,20 @@ You can `ds_abort` at any time with a reason. The worker stops at the next step 
 
 ---
 
+## Effort Level and Delegation
+
+**At ANY effort level (low/medium/high/max), delegate implementation to ds-orchestra.** Your effort should go into:
+- Test quality — comprehensive, edge-case-covering tests
+- Specification clarity — `goal` that leaves no ambiguity
+- Context injection — scope boundaries, rationale, guardrails
+- Diff review — reading every line the worker changed
+
+Implementation done by the worker + thorough audit by you is MORE thorough than you implementing alone — you catch details you'd miss when you're the author of the code.
+
+If you find yourself reading source files to scope a task — stop. Write the tests, write the context, call `ds_dispatch`. You're not being lazy; you're being systematic.
+
+---
+
 ## When to Use ds-orchestra
 
 **Good candidates:**

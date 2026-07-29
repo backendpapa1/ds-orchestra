@@ -168,7 +168,7 @@ function getBlockContent(): string {
 
 ## Task Routing
 
-**Before writing any implementation code, check this table:**
+**Effort level does NOT change this. Even at high/max effort, delegate implementation — thoroughness comes from test quality, specification clarity, and diff review, not from typing every line yourself.**
 
 | Task type | Action | Tool |
 |---|---|---|
@@ -178,9 +178,9 @@ function getBlockContent(): string {
 | Refactor across files with clear spec | **DELEGATE** — give the worker a spec | \`ds_dispatch\` |
 | Fix a bug with a failing test already written | **DELEGATE** — worker fixes to pass test | \`ds_dispatch\` |
 
-If the task matches any row above: write the tests, then call \`ds_dispatch\`. Do NOT read source files or start implementing. The worker does the implementation.
+If the task matches any row above: write the tests + context, call \`ds_dispatch\`. Do NOT read source files or start implementing. Delegation IS the thorough approach.
 
-**Only implement yourself if:** designing architecture, writing tests, exploratory investigation, single-line fix, or the spec is unclear.
+**Only implement yourself if:** designing architecture, writing tests, exploratory investigation, single-line fix, or the spec is genuinely unclear.
 
 Full guide: \`ds-orchestra/INSTRUCTIONS.md\`
 `.trim();
