@@ -75,13 +75,12 @@ If `mayEdit` globs overlap, the second dispatch is rejected with the conflicting
 
 ---
 
-## Cost Discipline
+## Model Selection
 
-- The worker model defaults to `deepseek-v4-flash` (configurable via `DEEPSEEK_MODEL`)
-- Each agent step costs ~1-5K tokens. A full 40-step run can cost ~100-200K tokens
-- At ~$0.28/M output tokens, this is ~15-30x cheaper than Claude Opus
-- **Peak hours** (Beijing 9:00-12:00 and 14:00-18:00) double the price — schedule large runs outside these windows if cost-sensitive
-- Thinking mode is OFF by default (required for temperature=0). Enabling it doubles token consumption.
+- Default: `deepseek-v4-flash` — fast, cheap, good for routine implementation
+- For complex tasks: `deepseek-v4-pro` — stronger reasoning, better tool-call reliability
+- Configure with: `ds-orchestra config set model deepseek-v4-pro`
+- Thinking mode is OFF by default (required for temperature=0)
 
 ---
 

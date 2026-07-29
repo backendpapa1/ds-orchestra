@@ -101,18 +101,38 @@ export class SandboxService {
   // ── Read guard ─────────────────────────────────────────────────
 
   /**
-   * Validates that reading a file at `relPath` is permitted.
-   * Only checks neverTouch — the worker may need to read broadly
-   * to understand the codebase, but must never read secrets or test files.
-   *
-   * @throws {TripwireError} if the path matches any neverTouch glob
+   * Glob patterns that are blocked for reads.
+   * Narrower than neverTouch — the worker needs to read config files
+   * (package.json, tsconfig, lock files) to understand the project.
+   * Only blocks test files (cheating prevention) and secrets.
    */
-  checkRead(contract: TaskContract, relPath: string): void {
-    this.resolveWithin(contract.workdir, relPath);
-    for (const pattern of contract.neverTouch) {
+  private static readonly READ_DENYLIST = [
+    'tests/**',
+    '**/*.spec.ts',
+    '**/*.spec.tsx',
+    '**/*.test.ts',
+    '**/*.test.tsx',
+    '**/*.spec.js',
+    '**/*.test.js',
+    '.git/**',
+    '.env*',
+  ];
+
+  /**
+   * Validates that reading a file at `relPath` is permitted.
+   * Uses a narrow denylist — the worker can read config files
+   * (package.json, tsconfig, lock files, migrations) to understand
+   * the codebase, but is blocked from test files (prevents cheating)
+   * and secrets (.env, .git).
+   *
+   * @throws {TripwireError} if the path matches the read denylist
+   */
+  checkRead(_contract: TaskContract, relPath: string): void {
+    for (const pattern of SandboxService.READ_DENYLIST) {
       if (minimatch(relPath, pattern, { dot: true })) {
         throw new TripwireError(
-          `Read blocked: path matches neverTouch glob: '${pattern}'`,
+          `Read blocked: '${relPath}' matches denylist: '${pattern}'. ` +
+          `Test files and secrets cannot be read. Try reading source files instead.`,
           { relPath, pattern },
         );
       }

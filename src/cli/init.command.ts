@@ -210,12 +210,12 @@ function getInstructionsContent(stack: ReturnType<typeof detectStack>): string {
 - [ ] Verify the implementation matches the spec
 - [ ] Check for unnecessary changes outside \`mayEdit\`
 
-## Cost Discipline
+## Model Selection
 
-- The worker model is \`${stack.stack === 'node' ? 'deepseek-v4-flash' : 'deepseek-v4-pro'}\`
-- Each step costs ~1-5K tokens. A 40-step run can cost ~100-200K tokens
-- At current pricing, this is ~15-30x cheaper than Claude Opus
-- Peak hours (Beijing 9-12, 14-18) double the price — schedule large runs outside these windows
+- Default: \`deepseek-v4-flash\` — fast, cheap, good for routine implementation
+- For complex tasks: \`deepseek-v4-pro\` — stronger reasoning, better tool-call reliability
+- Configure with: \`ds-orchestra config set model deepseek-v4-pro\`
+- Thinking mode is OFF by default (required for temperature=0)
 
 ## Stack Defaults
 

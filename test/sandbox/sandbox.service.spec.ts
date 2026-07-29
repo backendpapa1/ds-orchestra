@@ -126,6 +126,39 @@ describe('SandboxService', () => {
     });
   });
 
+  // ── checkRead ───────────────────────────────────────────────────
+
+  describe('checkRead', () => {
+    it('blocks reading test files', () => {
+      expect(() => sandbox.checkRead(baseContract, 'tests/foo.spec.ts')).toThrow(
+        TripwireError,
+      );
+      expect(() => sandbox.checkRead(baseContract, 'src/thing.test.ts')).toThrow(
+        TripwireError,
+      );
+    });
+
+    it('blocks reading .env and .git files', () => {
+      expect(() => sandbox.checkRead(baseContract, '.env')).toThrow(TripwireError);
+      expect(() => sandbox.checkRead(baseContract, '.git/config')).toThrow(TripwireError);
+    });
+
+    it('allows reading config files needed for project understanding', () => {
+      expect(() => sandbox.checkRead(baseContract, 'package.json')).not.toThrow();
+      expect(() => sandbox.checkRead(baseContract, 'tsconfig.json')).not.toThrow();
+    });
+
+    it('allows reading lock files and migrations', () => {
+      expect(() => sandbox.checkRead(baseContract, 'package-lock.json')).not.toThrow();
+      expect(() => sandbox.checkRead(baseContract, 'migrations/001.sql')).not.toThrow();
+    });
+
+    it('allows reading regular source files', () => {
+      expect(() => sandbox.checkRead(baseContract, 'src/index.ts')).not.toThrow();
+      expect(() => sandbox.checkRead(baseContract, 'README.md')).not.toThrow();
+    });
+  });
+
   // ── checkBash ───────────────────────────────────────────────────
 
   describe('checkBash', () => {
