@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.log
+.remember/
+.kanban/
+CLAUDE.md
+dev-plan/
+prd.md
