@@ -19,8 +19,6 @@ err()  { echo -e "${RED}[ds-orchestra]${NC} $*" >&2; }
 DS_VERSION="${DS_VERSION:-latest}"
 DS_NO_MCP="${DS_NO_MCP:-0}"
 DS_INSTALL_DIR="${DS_INSTALL_DIR:-}"
-INSTALL_METHOD="npm"  # "npm" or "tarball"
-
 # ── OS/Arch detection ──────────────────────────────────────────────
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m)"
@@ -63,46 +61,51 @@ fi
 log "Node.js v$NODE_VERSION detected"
 
 # ── Install ────────────────────────────────────────────────────────
-if command -v npm &>/dev/null; then
-  log "Installing via npm..."
-  if [ -n "$DS_INSTALL_DIR" ]; then
-    npm install -g --prefix "$DS_INSTALL_DIR" "ds-orchestra@${DS_VERSION}"
-  else
-    npm install -g "ds-orchestra@${DS_VERSION}"
-  fi
-  INSTALL_METHOD="npm"
+INSTALL_DIR="${DS_INSTALL_DIR:-$HOME/.ds-orchestra}"
+SRC_DIR="$INSTALL_DIR/src"
+mkdir -p "$INSTALL_DIR"
+
+# Determine version tag for download
+if [ "$DS_VERSION" = "latest" ]; then
+  DOWNLOAD_TAG="v1.0"  # fallback — replace with API call for real latest
 else
-  warn "npm not found. Falling back to tarball install."
-  INSTALL_DIR="${DS_INSTALL_DIR:-$HOME/.ds-orchestra/bin}"
-  mkdir -p "$INSTALL_DIR"
-  # Tarball URL would be set during publish
-  TARBALL_URL="https://github.com/backendpapa1/ds-orchestra/releases/download/v${DS_VERSION}/ds-orchestra-${OS}-${ARCH}.tar.gz"
-  log "Downloading from $TARBALL_URL..."
-  curl -fsSL "$TARBALL_URL" | tar -xz -C "$INSTALL_DIR"
-  INSTALL_METHOD="tarball"
-
-  # Add to PATH if not already there
-  case "$SHELL" in
-    */zsh) RC="$HOME/.zshrc" ;;
-    */bash) RC="$HOME/.bashrc" ;;
-    *) RC="$HOME/.profile" ;;
-  esac
-
-  if ! grep -q "$INSTALL_DIR" "$RC" 2>/dev/null; then
-    echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$RC"
-    log "Added $INSTALL_DIR to PATH in $RC"
-    log "Restart your shell or run: source $RC"
-  fi
+  DOWNLOAD_TAG="$DS_VERSION"
 fi
 
+# Download and extract the release source tarball
+TARBALL_URL="https://github.com/backendpapa1/ds-orchestra/archive/refs/tags/${DOWNLOAD_TAG}.tar.gz"
+log "Downloading ds-orchestra ${DOWNLOAD_TAG}..."
+curl -fsSL "$TARBALL_URL" | tar -xz -C "$INSTALL_DIR" --strip-components=1 2>/dev/null
+
+if [ ! -f "$INSTALL_DIR/package.json" ]; then
+  err "Download failed or tarball is missing package.json."
+  err "URL: $TARBALL_URL"
+  exit 1
+fi
+
+# Install dependencies and build
+log "Installing dependencies..."
+cd "$INSTALL_DIR"
+npm install 2>&1 | tail -1
+
+log "Building..."
+npx tsc -p tsconfig.build.json 2>&1
+
+# Link binaries globally (uses the "bin" field in package.json)
+log "Linking binaries..."
+npm link 2>&1
+
 # ── Verify binary ──────────────────────────────────────────────────
+NPM_PREFIX="$(npm prefix -g 2>/dev/null || echo '/usr/local')"
+export PATH="$NPM_PREFIX/bin:$PATH"
+
 if command -v ds-orchestra &>/dev/null; then
   VER="$(ds-orchestra --version 2>/dev/null || echo 'unknown')"
   log "Binary verified: ds-orchestra $VER"
 else
-  err "Binary 'ds-orchestra' not found on PATH after install."
-  err "Install method: $INSTALL_METHOD"
-  err "Check your PATH or re-run with DS_INSTALL_DIR set."
+  err "Binary not found on PATH."
+  err "Add this to your shell rc file:"
+  err "  export PATH=\"$NPM_PREFIX/bin:\$PATH\""
   exit 1
 fi
 
