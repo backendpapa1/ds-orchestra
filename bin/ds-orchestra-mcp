@@ -1,2 +1,5 @@
 #!/usr/bin/env node
-require('../dist/main-mcp.js');
+import('../dist/main-mcp.js').catch((err) => {
+  process.stderr.write(`ds-orchestra-mcp: ${err.message}\n`);
+  process.exit(1);
+});

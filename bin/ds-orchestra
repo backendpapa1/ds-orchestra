@@ -1,2 +1,5 @@
 #!/usr/bin/env node
-require('../dist/main-cli.js');
+import('../dist/main-cli.js').catch((err) => {
+  process.stderr.write(`ds-orchestra: ${err.message}\n`);
+  process.exit(1);
+});
