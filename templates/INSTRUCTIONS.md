@@ -1,96 +1,164 @@
-# ds-orchestra — Orchestration Policy
+# ds-orchestra — Orchestration Guide
 
 > This file is managed by `ds-orchestra update`. Do not edit manually.
 > Local overrides belong in `CLAUDE.md` outside the managed block.
 
 ---
 
+## What ds-orchestra Does
+
+Delegates bulk implementation work to a DeepSeek worker running in an isolated git worktree. The worker CAN read source files, config files, and docs to understand the project — but CANNOT touch tests, secrets, or files outside the `mayEdit` globs you specify.
+
+**You write the tests. The worker writes the implementation. You audit and merge.**
+
+---
+
 ## Full Workflow
 
-### 1. Write Tests
-Always write the failing tests yourself in `tests/`. The worker cannot modify test files — they are the contract. If tests pass before implementation starts, your tests are insufficient.
+### Step 1: Write Failing Tests
 
-### 2. Scope the Task
-Use Glob/Grep/LS to understand what files are involved. **Decide whether to delegate before reading source files.** If you need to read every file to write the spec, the task is too complex to delegate — implement it yourself.
+Write comprehensive tests that define the contract. The worker:
+- **CANNOT read test files** — prevents it from seeing assertions and hardcoding answers
+- **CANNOT write to test files** — prevents it from modifying the contract
+- **CAN read config files** (package.json, tsconfig, lock files) — needs these to understand the project
 
-### 3. Dispatch
-Call `ds_dispatch` with:
-- `repo`: Absolute path to the git repository
-- `goal`: Closed-form spec — exact function signatures, expected behaviour, edge cases. Leave no design decisions open.
-- `acceptanceCmd`: Shell command that exits 0 on success (e.g., `npx jest tests/feature.test.ts`)
-- `mayEdit`: Narrow glob(s) the worker can modify. Be as narrow as possible.
+### Step 2: Scope the Task
 
-The worker gets its own git worktree under `~/.ds-orchestra/wt/<taskId>`. Your working tree is never modified.
+Use Glob/Grep/LS to understand what files the implementation should touch. **Decide whether to delegate before reading source files.** If you need to read every source file to write the spec, implement it yourself.
 
-### 4. Supervise
-Poll `ds_status` and `ds_tail` to monitor progress. The worker runs asynchronously — dispatch returns immediately.
+### Step 3: Dispatch
 
-- `ds_status` gives a summary: steps completed, files touched, current status
-- `ds_tail` gives raw event log entries for debugging
+Call `ds_dispatch` with these parameters:
 
-You can `ds_abort` at any time with a reason. The worker terminates at the next step boundary and returns a partial diff.
+| Parameter | Required | Purpose |
+|---|---|---|
+| `repo` | Yes | Absolute path to the git repository |
+| `goal` | Yes | Closed-form spec. Exact signatures, edge cases, expected behavior. |
+| `acceptanceCmd` | Yes | Shell command that exits 0 on success. Must work in the isolated worktree. |
+| `mayEdit` | Yes | Glob patterns the worker can write to. Be narrow. Adjust based on scope. |
+| `maxSteps` | No | Max agent steps (default 40). Increase for complex multi-file work. |
+| `maxSeconds` | No | Time budget in seconds (default 900 = 15min). Increase for long builds. |
 
-### 5. Audit
-Read the full diff with `ds_diff`. **Never skip this step.** The worker runs at temperature 0 and cannot modify tests, but it can still produce incorrect code, hardcode values to satisfy assertions, or misunderstand the spec.
+**Permission tuning** — adjust these per-task based on what the worker actually needs:
 
-### 6. Accept or Reject
-- `ds_accept`: Squash-merges the worker branch into your current branch, then removes the worktree and branch. This is irreversible — audit first.
-- `ds_reject`: Removes the worktree and branch without merging. Use when the implementation is wrong or the approach needs to change.
+```
+# Narrow — single file fix
+mayEdit: ["src/utils/formatDate.ts"]
+
+# Broader — feature across a module  
+mayEdit: ["src/feature-a/**", "src/shared/types.ts"]
+
+# Full source access — refactoring
+mayEdit: ["src/**"]
+
+# Custom bash commands — project uses pnpm
+bashAllow: ["pnpm", "node", "tsc", "vitest", "eslint", "ls", "cat"]
+
+# Complex work needs more steps
+maxSteps: 60
+maxSeconds: 1800
+```
+
+**If the worker gets blocked** by a sandbox violation (e.g., tries to read a file it needs but can't, or run a command that's not allowlisted), don't abort — re-dispatch with adjusted permissions.
+
+### Step 4: Supervise
+
+The worker runs asynchronously. Poll these tools to monitor:
+
+- `ds_status` — summary: steps completed, files written, current status
+- `ds_tail` — raw event log entries for debugging what the worker is doing right now
+- `ds_wait_all` — block until one or more tasks complete (for parallel dispatch)
+
+You can `ds_abort` at any time with a reason. The worker stops at the next step boundary.
+
+**Status values:**
+- `running` — still working
+- `passed` — acceptance command passed AND no test files modified
+- `failed` — acceptance failed OR tests were modified
+- `violated` — worker tripped a sandbox guardrail
+- `aborted` — you cancelled it
+
+### Step 5: Audit
+
+**Never skip this step.** Call `ds_diff` to get the full diff. Review:
+
+- [ ] Every changed line
+- [ ] No test files modified (`testsModified` is empty)
+- [ ] No hardcoded values that satisfy assertions without real implementation
+- [ ] Implementation matches the spec
+- [ ] No unnecessary changes outside `mayEdit`
+- [ ] The acceptance command passes when you run it
+
+### Step 6: Accept or Reject
+
+- `ds_accept` — squash-merges the worker branch into your current branch, then cleans up the worktree and branch. **Irreversible** — audit first.
+- `ds_reject` — cleans up without merging. Use when the implementation is wrong.
 
 ---
 
-## Audit Checklist
+## When to Use ds-orchestra
 
-- [ ] Read the full diff — every line
-- [ ] Verify tests pass (`acceptanceExitCode === 0`)
-- [ ] Verify no test files were modified (`testsModified` is empty)
-- [ ] Check for hardcoded values that satisfy assertions without solving the problem
-- [ ] Verify the implementation matches the spec exactly
-- [ ] Check for unnecessary changes outside `mayEdit`
-- [ ] Run the acceptance command yourself to confirm
+**Good candidates:**
+- Feature implementation with clear acceptance criteria (tests already written)
+- Boilerplate/scaffold generation
+- Mechanical refactoring with well-defined scope
+- Data migration scripts
+- "Fill in the implementation to make these tests pass"
 
----
-
-## When NOT to Delegate
-
-- **Design work**: Architecture decisions, API design, naming conventions
-- **Test authorship**: Tests define the contract — Claude must write them
-- **Exploratory work**: If you don't know what the solution looks like, you can't write a closed-form spec
-- **Tightly coupled changes**: Changes that span many files with complex interdependencies
-- **Single-line fixes**: The overhead of dispatch > the work itself
+**Bad candidates:**
+- Design work (architecture, API design, naming conventions)
+- Test authorship (tests are the contract — you write them)
+- Exploratory work (if you don't know the solution shape, you can't write a closed-form spec)
+- Single-line fixes (dispatch overhead > work)
+- Tightly coupled changes spanning many unrelated modules
 
 ---
 
 ## Parallel Dispatch
 
-You can dispatch multiple independent tasks simultaneously with non-overlapping `mayEdit` globs:
+Run independent tasks simultaneously with non-overlapping `mayEdit`:
 
 ```
-ds_dispatch: mayEdit=['src/feature-a/**']  → taskId: abc12345
-ds_dispatch: mayEdit=['src/feature-b/**']  → taskId: def67890
-ds_wait_all: taskIds=['abc12345', 'def67890']
+ds_dispatch: mayEdit=["src/feature-a/**"] → taskId: abc12345
+ds_dispatch: mayEdit=["src/feature-b/**"] → taskId: def67890
+ds_wait_all: taskIds=["abc12345", "def67890"]
 ```
 
-If `mayEdit` globs overlap, the second dispatch is rejected with the conflicting taskId and intersecting globs — sequence them instead.
-
----
-
-## Model Selection
-
-- Default: `deepseek-v4-flash` — fast, cheap, good for routine implementation
-- For complex tasks: `deepseek-v4-pro` — stronger reasoning, better tool-call reliability
-- Configure with: `ds-orchestra config set model deepseek-v4-pro`
-- Thinking mode is OFF by default (required for temperature=0)
+If `mayEdit` globs overlap, the second dispatch is rejected with the conflicting taskId — sequence them instead.
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Likely Cause | Action |
-|---|---|---|
-| `ds_dispatch` returns overlap error | Active task has intersecting `mayEdit` | Wait for it to complete, or narrow your `mayEdit` |
-| Worker status is `violated` | Worker tried to edit tests, run a blocked command, or exceeded budget | Read the tripwire reason in `ds_status`; adjust the spec or `mayEdit` |
-| Worker status is `failed` | Acceptance command exited non-zero or tests were modified | Read the diff; the worker may have hardcoded values |
-| Worker summary starts with `BLOCKED:` | The spec was ambiguous or the worker couldn't proceed | Clarify the spec and re-dispatch |
-| `ds_accept` fails | Task is still running, or the merge conflicts | Wait for completion; resolve conflicts manually |
-| Orphaned worktrees after crash | Process restart clears in-memory state | Run `ds-orchestra gc` to clean up |
+### Worker violated: "Read blocked: matches denylist"
+The worker tried to read a test file or .env. This is by design — the worker cannot see test assertions. Your tests should be clear enough that the acceptance command is sufficient guidance.
+
+### Worker violated: "not in mayEdit"
+The spec requires changes to files outside `mayEdit`. Re-dispatch with broader `mayEdit`.
+
+### Worker violated: "not in bashAllow"
+The worker needs a command not in the allowlist (e.g., `pnpm`). Re-dispatch with `bashAllow` including that command. The allowlist is per-task — you control it.
+
+### Worker violated: "maxSteps exceeded"
+The task is more complex than anticipated. Re-dispatch with higher `maxSteps`.
+
+### Worker failed: acceptance command failed
+Read the diff — the worker may have written incorrect code, or the acceptance command may need adjustment. Fix and re-dispatch.
+
+### Worker summary starts with "BLOCKED:"
+The spec is ambiguous. The worker is telling you it can't proceed without clarification. Refine the `goal` and re-dispatch.
+
+### Overlap error on dispatch
+An active task's `mayEdit` intersects with yours. Wait for it to complete, narrow your `mayEdit`, or sequence the tasks.
+
+### Orphaned worktrees after crash
+The server keeps state in memory — a restart orphans worktrees. Run `ds-orchestra gc` to clean up.
+
+---
+
+## Model Selection
+
+- Default: `deepseek-v4-flash` — fast, good for routine implementation
+- For complex tasks: `deepseek-v4-pro` — stronger reasoning, better tool-call reliability
+- Configure with: `ds-orchestra config set model deepseek-v4-pro`
+- Thinking mode is OFF by default (required for temperature=0)

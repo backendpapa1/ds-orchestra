@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { existsSync, writeFileSync, mkdirSync, appendFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CliService } from './cli.service.js';
 import { ManagedBlockService } from './managed-block.service.js';
 import { ConfigFileService } from '../config/config-file.service.js';
@@ -72,8 +73,22 @@ export class InitCommand implements OnModuleInit {
     }
     log(`Created ${orchestrDir}/.runs/`);
 
-    // 4. Write INSTRUCTIONS.md
-    const instructionsContent = getInstructionsContent(stack);
+    // 4. Write INSTRUCTIONS.md from the template shipped with the package
+    const templatePath = join(
+      fileURLToPath(import.meta.url),
+      '..', '..', '..', 'templates', 'INSTRUCTIONS.md',
+    );
+    let instructionsContent: string;
+    if (existsSync(templatePath)) {
+      instructionsContent = readFileSync(templatePath, 'utf-8');
+      // Replace model placeholder with detected stack's recommended model
+      instructionsContent = instructionsContent.replace(
+        /Default: `deepseek-v4-flash`/,
+        `Default: \`deepseek-v4-flash\` (detected: ${stack.stack})`,
+      );
+    } else {
+      instructionsContent = getInstructionsContent(stack);
+    }
     if (!options.dryRun) {
       writeFileSync(join(orchestrDir, 'INSTRUCTIONS.md'), instructionsContent, 'utf-8');
     }

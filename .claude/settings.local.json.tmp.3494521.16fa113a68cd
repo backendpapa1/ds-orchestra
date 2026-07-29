@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(node --experimental-vm-modules node_modules/jest/bin/jest.js --no-coverage)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Fix: narrow read denylist + comprehensive INSTRUCTIONS.md *)",
+      "Bash(git push *)"
+    ]
+  }
+}
