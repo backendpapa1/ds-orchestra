@@ -67,7 +67,13 @@ mkdir -p "$INSTALL_DIR"
 
 # Determine version tag for download
 if [ "$DS_VERSION" = "latest" ]; then
-  DOWNLOAD_TAG="v1.0"  # fallback — replace with API call for real latest
+  log "Fetching latest release tag..."
+  DOWNLOAD_TAG=$(curl -fsSL "https://api.github.com/repos/backendpapa1/ds-orchestra/releases/latest" 2>/dev/null | grep -o '"tag_name": *"[^"]*"' | head -1 | grep -o '"v[^"]*"' | tr -d '"')
+  if [ -z "$DOWNLOAD_TAG" ]; then
+    warn "Could not determine latest version. Trying v1.0.3 as fallback."
+    DOWNLOAD_TAG="v1.0.3"
+  fi
+  log "Latest release: $DOWNLOAD_TAG"
 else
   DOWNLOAD_TAG="$DS_VERSION"
 fi
