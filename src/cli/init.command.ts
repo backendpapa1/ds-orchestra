@@ -165,24 +165,24 @@ export class InitCommand implements OnModuleInit {
 function getBlockContent(): string {
   return `
 <!-- This block is managed by ds-orchestra. Do not edit manually. -->
-<!-- Local overrides go in CLAUDE.md OUTSIDE this block. -->
 
-## Delegation (ds-orchestra)
+## Task Routing
 
-**When to delegate**: Bulk/mechanical implementation above ~200 lines with a clear acceptance command (compile + tests pass). Refactoring, boilerplate, data migrations, implementation against existing tests.
+**Before writing any implementation code, check this table:**
 
-**Before dispatching**:
-- Write the tests yourself in \`tests/\`. The worker CANNOT edit tests.
-- \`goal\` must be a closed-form spec: exact signatures, exact behavior, edge cases.
-- \`mayEdit\` must be as narrow as possible (e.g., \`src/feature-a/**\`).
+| Task type | Action | Tool |
+|---|---|---|
+| Implement a feature against existing tests | **DELEGATE** — do not implement yourself | \`ds_dispatch\` |
+| Fill in function bodies to pass tests | **DELEGATE** — the worker does this | \`ds_dispatch\` |
+| Generate boilerplate, scaffolds, migrations | **DELEGATE** — mechanical work | \`ds_dispatch\` |
+| Refactor across files with clear spec | **DELEGATE** — give the worker a spec | \`ds_dispatch\` |
+| Fix a bug with a failing test already written | **DELEGATE** — worker fixes to pass test | \`ds_dispatch\` |
 
-**Decide before reading source files**. Use Glob/Grep/LS only until you commit to delegate. If you cannot scope the task without reading every file, implement it yourself.
+If the task matches any row above: write the tests, then call \`ds_dispatch\`. Do NOT read source files or start implementing. The worker does the implementation.
 
-**After the run**:
-- Read the full diff with \`ds_diff\` before \`ds_accept\`. Never merge unaudited.
-- If the worker failed because tests were wrong, fix the tests (you wrote them) and re-dispatch.
+**Only implement yourself if:** designing architecture, writing tests, exploratory investigation, single-line fix, or the spec is unclear.
 
-Full workflow and audit checklist: \`ds-orchestra/INSTRUCTIONS.md\`
+Full guide: \`ds-orchestra/INSTRUCTIONS.md\`
 `.trim();
 }
 
